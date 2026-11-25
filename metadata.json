@@ -1,0 +1,6 @@
+{
+  "name": "ChatPDFy",
+  "description": "Upload study PDFs to chat with strict citation-grounded AI answers and generate timed adaptive quizzes with explanations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
