@@ -93,8 +93,8 @@ async function generateWithFallback(
   primaryThinking: ThinkingLevel,
 ): Promise<GenerateContentResponse> {
   const attempts: Array<{ model: string; thinking: ThinkingLevel; delayMs: number }> = [
-    { model: 'gemini-4-hydrogen', thinking: primaryThinking, delayMs: 0 },
-    { model: 'gemini-3.1-flash-lite', thinking: ThinkingLevel.MINIMAL, delayMs: 250 },
+    { model: 'gemini-3.1-flash-lite', thinking: ThinkingLevel.MINIMAL, delayMs: 0 },
+    { model: 'gemini-4-hydrogen', thinking: primaryThinking, delayMs: 250 },
   ];
 
   let lastErr: unknown;
@@ -116,7 +116,7 @@ async function generateWithFallback(
   throw formatReadableAiError(lastErr);
 }
 
-function buildDocumentContext(documents: PdfDocumentRecord[], maxChars = 140000): string {
+function buildDocumentContext(documents: PdfDocumentRecord[], maxChars = 45000): string {
   const blocks: string[] = [];
   let total = 0;
 
