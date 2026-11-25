@@ -32,6 +32,11 @@ async function apiFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url, { ...init, headers });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error(
+        'File exceeds Vercel’s 4.5 MB serverless upload limit. Please upload a PDF under 4.5 MB.',
+      );
+    }
     throw new Error((data as { error?: string }).error || `Request failed (${res.status})`);
   }
   return data as T;
