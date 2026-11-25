@@ -69,41 +69,71 @@ app.get('/api/pdfs', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/pdfs/upload', upload.array('files', 10), async (req: Request, res: Response) => {
-  try {
-    const studentId = getStudentId(req);
-    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-    if (files.length === 0) {
-      res.status(400).json({ error: 'Please select at least one PDF file.' });
+app.post(
+  '/api/pdfs/upload',
+  (req: Request, res: Response, next: NextFunction) => {
+    if (req.is('application/json')) {
+      next();
       return;
     }
+    upload.array('files', 10)(req, res, next);
+  },
+  async (req: Request, res: Response) => {
+    try {
+      const studentId = getStudentId(req);
 
-    const docRecords: PdfDocumentRecord[] = await Promise.all(
-      files.map(async (file) => {
-        const safeName = path.basename(file.originalname || 'document.pdf').slice(0, 140);
-        const extracted = await extractPdfPages(file.buffer);
-        return {
-          id: crypto.randomUUID(),
-          studentId,
-          fileName: safeName,
-          fileSize: file.size,
-          pageCount: extracted.pageCount,
-          charCount: extracted.charCount,
-          pages: extracted.pages,
-          uploadedAt: new Date().toISOString(),
-        };
-      }),
-    );
+      if (req.is('application/json')) {
+        const incoming = Array.isArray(req.body?.documents) ? req.body.documents : [];
+        if (incoming.length === 0) {
+          res.status(400).json({ error: 'Please select at least one PDF file.' });
+          return;
+        }
+        const docRecords: PdfDocumentRecord[] = incoming.map((doc: any) => {
+          const pages = Array.isArray(doc.pages) ? doc.pages : [];
+          return {
+            id: crypto.randomUUID(),
+            studentId,
+            fileName: path.basename(String(doc.fileName || 'document.pdf')).slice(0, 140),
+            fileSize: Number(doc.fileSize) || 0,
+            pageCount: Number(doc.pageCount) || pages.length,
+            charCount: Number(doc.charCount) || 0,
+            pages,
+            uploadedAt: new Date().toISOString(),
+          };
+        });
+        await savePdfs(docRecords);
+        res.json({ documents: docRecords.map(({ pages: _pages, ...meta }) => meta) });
+        return;
+      }
 
-    await savePdfs(docRecords);
-
-    res.json({
-      documents: docRecords.map(({ pages: _pages, ...meta }) => meta),
-    });
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message || 'Failed to parse PDF' });
-  }
-});
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+      if (files.length === 0) {
+        res.status(400).json({ error: 'Please select at least one PDF file.' });
+        return;
+      }
+      const docRecords: PdfDocumentRecord[] = await Promise.all(
+        files.map(async (file) => {
+          const safeName = path.basename(file.originalname || 'document.pdf').slice(0, 140);
+          const extracted = await extractPdfPages(file.buffer);
+          return {
+            id: crypto.randomUUID(),
+            studentId,
+            fileName: safeName,
+            fileSize: file.size,
+            pageCount: extracted.pageCount,
+            charCount: extracted.charCount,
+            pages: extracted.pages,
+            uploadedAt: new Date().toISOString(),
+          };
+        }),
+      );
+      await savePdfs(docRecords);
+      res.json({ documents: docRecords.map(({ pages: _pages, ...meta }) => meta) });
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message || 'Failed to parse PDF' });
+    }
+  },
+);
 
 app.delete('/api/pdfs/:id', async (req: Request, res: Response) => {
   try {
