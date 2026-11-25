@@ -94,9 +94,7 @@ async function generateWithFallback(
 ): Promise<GenerateContentResponse> {
   const attempts: Array<{ model: string; thinking: ThinkingLevel; delayMs: number }> = [
     { model: 'gemini-4-hydrogen', thinking: primaryThinking, delayMs: 0 },
-    { model: 'gemini-3.1-flash-lite', thinking: ThinkingLevel.MINIMAL, delayMs: 400 },
-    { model: 'gemini-3.1-flash-lite', thinking: ThinkingLevel.MINIMAL, delayMs: 1400 },
-    { model: 'gemini-3.1-flash-lite', thinking: ThinkingLevel.MINIMAL, delayMs: 2800 },
+    { model: 'gemini-3.1-flash-lite', thinking: ThinkingLevel.MINIMAL, delayMs: 250 },
   ];
 
   let lastErr: unknown;
