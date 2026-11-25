@@ -1,3 +1,5 @@
+import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+(globalThis as Record<string, unknown>).pdfjsWorker = pdfjsWorker;
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PdfPage } from './types.ts';
 
