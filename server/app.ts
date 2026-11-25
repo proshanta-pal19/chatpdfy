@@ -153,13 +153,15 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       return;
     }
 
-    const docs = await getPdfsByIds(studentId, documentIds);
+    const [docs, history] = await Promise.all([
+      getPdfsByIds(studentId, documentIds),
+      listChats(studentId),
+    ]);
     if (docs.length === 0) {
       res.status(400).json({ error: 'Please upload at least one PDF before chatting.' });
       return;
     }
 
-    const history = await listChats(studentId);
     const aiResult = await answerFromDocuments(question, docs, history);
 
     const userMsg = {
@@ -170,7 +172,6 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       documentIds: docs.map((d) => d.id),
       createdAt: new Date().toISOString(),
     };
-    await saveChatMessage(userMsg);
 
     const assistantMsg = {
       id: crypto.randomUUID(),
@@ -182,7 +183,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       documentIds: docs.map((d) => d.id),
       createdAt: new Date().toISOString(),
     };
-    await saveChatMessage(assistantMsg);
+    await Promise.all([saveChatMessage(userMsg), saveChatMessage(assistantMsg)]);
 
     res.json({ userMessage: userMsg, assistantMessage: assistantMsg });
   } catch (err) {
