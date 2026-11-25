@@ -1,4 +1,6 @@
 import { jsPDF } from 'jspdf';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type {
   ChatMessage,
   GeneratedQuiz,
@@ -7,6 +9,8 @@ import type {
   QuizDifficulty,
   StudentProfile,
 } from '../types';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 function getStudentId(): string {
   const key = 'chatpdfy-student-id';
@@ -47,14 +51,44 @@ export async function fetchPdfs(): Promise<PdfDocumentMeta[]> {
   return data.documents;
 }
 
-export async function uploadPdfs(files: File[]): Promise<PdfDocumentMeta[]> {
-  const formData = new FormData();
-  for (const file of files) {
-    formData.append('files', file);
+async function extractPdfInBrowser(file: File) {
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdfDoc = await pdfjsLib.getDocument({ data }).promise;
+  const pageCount = pdfDoc.numPages;
+  const pages: Array<{ pageNumber: number; text: string }> = [];
+  let charCount = 0;
+
+  for (let p = 1; p <= pageCount; p += 1) {
+    const page = await pdfDoc.getPage(p);
+    const textContent = await page.getTextContent();
+    let pageText = '';
+    for (const item of textContent.items as Array<{ str?: string; hasEOL?: boolean }>) {
+      if (typeof item.str === 'string') {
+        pageText += item.str + (item.hasEOL ? '\n' : ' ');
+      }
+    }
+    const normalized = pageText.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    if (normalized) {
+      pages.push({ pageNumber: p, text: normalized });
+      charCount += normalized.length;
+    }
+    page.cleanup();
   }
+  await pdfDoc.destroy();
+
+  if (pages.length === 0) {
+    throw new Error(
+      'No extractable text found in this PDF. Scanned image-only PDFs are not supported.',
+    );
+  }
+  return { fileName: file.name, fileSize: file.size, pageCount, charCount, pages };
+}
+
+export async function uploadPdfs(files: File[]): Promise<PdfDocumentMeta[]> {
+  const extractedDocs = await Promise.all(files.map(extractPdfInBrowser));
   const data = await apiFetch<{ documents: PdfDocumentMeta[] }>('/api/pdfs/upload', {
     method: 'POST',
-    body: formData,
+    body: JSON.stringify({ documents: extractedDocs }),
   });
   return data.documents;
 }
