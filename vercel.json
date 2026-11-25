@@ -5,17 +5,11 @@
   "functions": {
     "api/index.ts": {
       "includeFiles": "node_modules/pdfjs-dist/**",
-      "maxDuration": 60
+      "maxDuration": 10
     }
   },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    },
-    {
-      "source": "/((?!assets/|favicon.ico).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/((?!api/|assets/|favicon.ico).*)", "destination": "/index.html" }
   ]
 }
