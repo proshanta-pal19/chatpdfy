@@ -74,7 +74,7 @@ async function extractPdfInBrowser(file: File) {
     }
     page.cleanup();
   }
-  await pdfDoc.destroy();
+  await pdfDoc.cleanup();
 
   if (pages.length === 0) {
     throw new Error(
